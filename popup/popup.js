@@ -1,4 +1,4 @@
-// Initialisation de Firebase avec les fichiers locaux
+// Configuration Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCkqjFzv8g5-WlCFrnM25-44zA2qa03NC8",
   authDomain: "tabsync-294cc.firebaseapp.com",
@@ -10,22 +10,61 @@ const firebaseConfig = {
   measurementId: "G-WT43P1RZDV"
 };
 
-// Initialise Firebase
+// Initialisation de Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 const auth = firebase.auth();
 
-// Connexion anonyme pour obtenir un UID unique
-auth.signInAnonymously()
-  .then(() => {
-    const userId = auth.currentUser.uid;
-    console.log("UID Firebase :", userId);
-    initApp(userId);
-  })
-  .catch(error => {
-    console.error("Erreur d'authentification :", error);
-    alert("Erreur de connexion à Firebase. Vérifie ta connexion Internet.");
-  });
+// Gestion de l'UID avec chrome.storage.sync
+chrome.storage.sync.get(['userId'], (result) => {
+  if (result.userId) {
+    // Utilise l'UID existant
+    console.log("UID récupéré depuis sync:", result.userId);
+    initApp(result.userId);
+  } else {
+    // Génère un nouvel UID et le sauvegarde
+    auth.signInAnonymously()
+      .then(() => {
+        const userId = auth.currentUser.uid;
+        chrome.storage.sync.set({ userId }, () => {
+          console.log("Nouvel UID généré et synchronisé:", userId);
+          initApp(userId);
+        });
+      })
+      .catch(error => {
+        console.error("Erreur d'authentification:", error);
+        alert("Erreur de connexion à Firebase. Vérifie ta connexion Internet.");
+      });
+  }
+});
+
+// Bouton pour réinitialiser l'UID (optionnel)
+document.addEventListener('DOMContentLoaded', () => {
+  const resetButton = document.createElement('button');
+  resetButton.id = 'reset-uid';
+  resetButton.textContent = 'Réinitialiser l\'UID';
+  resetButton.style.marginBottom = '10px';
+  resetButton.style.width = '100%';
+  resetButton.style.padding = '8px';
+  resetButton.style.backgroundColor = '#f1c40f'; // Jaune pour attirer l'attention
+  resetButton.style.border = 'none';
+  resetButton.style.borderRadius = '4px';
+  resetButton.style.cursor = 'pointer';
+
+  resetButton.onclick = () => {
+    if (confirm("Réinitialiser l'UID ? Cela supprimera l'accès aux sessions existantes.")) {
+      auth.signOut().then(() => {
+        chrome.storage.sync.remove(['userId'], () => {
+          location.reload(); // Recharge l'extension
+        });
+      });
+    }
+  };
+
+  // Ajoute le bouton de réinitialisation en haut de la popup
+  const firstElement = document.body.firstChild;
+  document.body.insertBefore(resetButton, firstElement);
+});
 
 function initApp(userId) {
   const syncButton = document.getElementById('sync-button');
@@ -59,9 +98,9 @@ function initApp(userId) {
       database.ref(`users/${userId}/sessions/${sessionName}`).set(tabsData)
         .then(() => {
           alert(`Onglets synchronisés dans la session "${sessionName}" !`);
-          updateRemoteTabs(userId); // Met à jour l'affichage après synchronisation
+          updateRemoteTabs(userId); // Met à jour l'affichage
         })
-        .catch(error => console.error("Erreur de synchronisation :", error));
+        .catch(error => console.error("Erreur de synchronisation:", error));
     });
   };
 
@@ -70,7 +109,7 @@ function initApp(userId) {
     database.ref(`users/${userId}/sessions`).on('value', (snapshot) => {
       remoteTabsDiv.innerHTML = `
         <div class="tab-container">
-          <h3>Mes sessions</h3>
+          <h3>Mes sessions (UID: ${userId.substring(0, 8)}...)</h3>
         </div>
       `;
       const sessions = snapshot.val();
