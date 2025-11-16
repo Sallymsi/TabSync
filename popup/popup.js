@@ -1,3 +1,4 @@
+// Initialisation de Firebase avec les fichiers locaux
 const firebaseConfig = {
   apiKey: "AIzaSyCkqjFzv8g5-WlCFrnM25-44zA2qa03NC8",
   authDomain: "tabsync-294cc.firebaseapp.com",
@@ -9,27 +10,24 @@ const firebaseConfig = {
   measurementId: "G-WT43P1RZDV"
 };
 
+// Initialise Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
+const auth = firebase.auth();
 
-// Génère ou récupère l'UID
-chrome.storage.sync.get(['userId'], (result) => {
-  if (!result.userId) {
-    // Génère un nouvel UID si aucun n'existe
-    const newUserId = 'user-' + Math.random().toString(36).substr(2, 12);
-    chrome.storage.sync.set({ userId: newUserId }, () => {
-      console.log("Nouvel UID généré et synchronisé :", newUserId);
-      initApp(newUserId);
-    });
-  } else {
-    // Utilise l'UID existant
-    console.log("UID récupéré depuis sync :", result.userId);
-    initApp(result.userId);
-  }
-});
+// Connexion anonyme pour obtenir un UID unique
+auth.signInAnonymously()
+  .then(() => {
+    const userId = auth.currentUser.uid;
+    console.log("UID Firebase :", userId);
+    initApp(userId);
+  })
+  .catch(error => {
+    console.error("Erreur d'authentification :", error);
+    alert("Erreur de connexion à Firebase. Vérifie ta connexion Internet.");
+  });
 
 function initApp(userId) {
-  // Le reste de ton code...
   const syncButton = document.getElementById('sync-button');
   const openAllRemoteTabsButton = document.getElementById('open-all-remote-tabs');
   const sessionSelect = document.getElementById('session-select');
@@ -59,13 +57,16 @@ function initApp(userId) {
     chrome.tabs.query({}, (tabs) => {
       const tabsData = tabs.map(tab => ({ url: tab.url, title: tab.title }));
       database.ref(`users/${userId}/sessions/${sessionName}`).set(tabsData)
-        .then(() => alert(`Onglets synchronisés !`))
-        .catch(error => console.error("Erreur :", error));
+        .then(() => {
+          alert(`Onglets synchronisés dans la session "${sessionName}" !`);
+          updateRemoteTabs(userId); // Met à jour l'affichage après synchronisation
+        })
+        .catch(error => console.error("Erreur de synchronisation :", error));
     });
   };
 
   // Affiche les onglets distants
-  const updateRemoteTabs = () => {
+  function updateRemoteTabs(userId) {
     database.ref(`users/${userId}/sessions`).on('value', (snapshot) => {
       remoteTabsDiv.innerHTML = `
         <div class="tab-container">
@@ -104,9 +105,9 @@ function initApp(userId) {
         tabContainer.innerHTML = `<h3>Mes sessions</h3><p>Aucune session trouvée.</p>`;
       }
     });
-  };
+  }
 
-  // Bouton pour ouvrir tous les onglets
+  // Bouton pour ouvrir tous les onglets d'une session
   openAllRemoteTabsButton.onclick = () => {
     const sessionName = sessionSelect.value;
     database.ref(`users/${userId}/sessions/${sessionName}`).once('value', (snapshot) => {
@@ -115,12 +116,15 @@ function initApp(userId) {
         alert("Aucun onglet dans cette session.");
         return;
       }
-      if (confirm(`Ouvrir tous les ${tabsData.length} onglets ?`)) {
+      if (confirm(`Ouvrir tous les ${tabsData.length} onglets de la session "${sessionName}" ?`)) {
         tabsData.forEach(tab => chrome.tabs.create({ url: tab.url }));
       }
     });
   };
 
-  sessionSelect.addEventListener('change', updateRemoteTabs);
-  updateRemoteTabs();
+  // Met à jour les onglets distants quand la session change
+  sessionSelect.addEventListener('change', () => updateRemoteTabs(userId));
+
+  // Charge les onglets distants au démarrage
+  updateRemoteTabs(userId);
 }
