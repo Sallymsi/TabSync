@@ -12,14 +12,29 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-document.addEventListener('DOMContentLoaded', () => {
+// Initialisation de l'UID (à placer avant tout le reste)
+chrome.storage.sync.get(['userId'], (result) => {
+  if (!result.userId) {
+    firebase.auth().signInAnonymously().then(() => {
+      const userId = firebase.auth().currentUser.uid;
+      chrome.storage.sync.set({ userId }, () => {
+        console.log("UID généré et synchronisé :", userId);
+        initApp(userId); // Passe l'UID à initApp
+      });
+    }).catch(error => console.error("Erreur d'authentification :", error));
+  } else {
+    const userId = result.userId;
+    console.log("UID existant récupéré :", userId);
+    initApp(userId); // Passe l'UID à initApp
+  }
+});
+
+function initApp(userId) {
   const syncButton = document.getElementById('sync-button');
   const openAllRemoteTabsButton = document.getElementById('open-all-remote-tabs');
-  const userIdInput = document.getElementById('user-id');
+  const sessionSelect = document.getElementById('session-select');
   const localTabsDiv = document.getElementById('local-tabs');
   const remoteTabsDiv = document.getElementById('remote-tabs');
-
-  let remoteTabsData = []; // Variable pour stocker les onglets distants
 
   // Affiche les onglets locaux
   chrome.tabs.query({}, (tabs) => {
@@ -31,11 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tabs.forEach(tab => {
       const tabContainer = document.querySelector('#local-tabs .tab-container');
       const tabElement = document.createElement('div');
-      tabElement.className = 'tab';
-      tabElement.innerHTML = `
-        <div class="tab-title">${tab.title}</div>
-        <div class="tab-url">${tab.url}</div>
-      `;
+      tabElement.className = 'local-tab';
+      tabElement.innerHTML = `<div class="local-tab-title">${tab.title}</div>`;
       tabElement.onclick = () => chrome.tabs.update(tab.id, { active: true });
       tabContainer.appendChild(tabElement);
     });
@@ -43,54 +55,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Synchronise les onglets vers Firebase
   syncButton.onclick = () => {
-    const userId = userIdInput.value.trim() || "test-user";
+    const sessionName = sessionSelect.value;
     chrome.tabs.query({}, (tabs) => {
       const tabsData = tabs.map(tab => ({ url: tab.url, title: tab.title }));
-      database.ref(`users/${userId}/tabs`).set(tabsData)
-        .then(() => alert(`Onglets synchronisés avec l'ID : ${userId}`))
+      database.ref(`users/${userId}/sessions/${sessionName}`).set(tabsData)
+        .then(() => alert(`Onglets synchronisés dans la session "${sessionName}" !`))
         .catch(error => console.error("Erreur :", error));
     });
   };
 
   // Récupère les onglets distants depuis Firebase
   const updateRemoteTabs = () => {
-    const userId = userIdInput.value.trim() || "test-user";
-    database.ref(`users/${userId}/tabs`).on('value', (snapshot) => {
-      remoteTabsData = snapshot.val() || []; // Stocke les onglets distants
+    database.ref(`users/${userId}/sessions`).on('value', (snapshot) => {
       remoteTabsDiv.innerHTML = `
         <div class="tab-container">
-          <h3>Onglets distants (ID : ${userId})</h3>
+          <h3>Mes sessions</h3>
         </div>
       `;
-      if (remoteTabsData.length > 0) {
+      const sessions = snapshot.val();
+      if (sessions) {
         const tabContainer = document.querySelector('#remote-tabs .tab-container');
-        remoteTabsData.forEach(tab => {
-          const tabElement = document.createElement('div');
-          tabElement.className = 'tab';
-          tabElement.innerHTML = `
-            <div class="tab-title">${tab.title}</div>
-            <div class="tab-url">${tab.url}</div>
-          `;
-          tabElement.onclick = () => chrome.tabs.create({ url: tab.url });
-          tabContainer.appendChild(tabElement);
+        Object.keys(sessions).forEach(sessionName => {
+          const sessionItem = document.createElement('div');
+          sessionItem.className = 'session-item';
+          sessionItem.textContent = sessionName.charAt(0).toUpperCase() + sessionName.slice(1);
+
+          const tabList = document.createElement('div');
+          tabList.className = 'tab-list';
+
+          sessions[sessionName].forEach(tab => {
+            const tabElement = document.createElement('div');
+            tabElement.className = 'tab';
+            tabElement.innerHTML = `<div class="tab-title">${tab.title}</div>`;
+            tabElement.onclick = () => chrome.tabs.create({ url: tab.url });
+            tabList.appendChild(tabElement);
+          });
+
+          sessionItem.onclick = () => {
+            sessionItem.classList.toggle('expanded');
+            tabList.style.display = tabList.style.display === 'block' ? 'none' : 'block';
+          };
+
+          tabContainer.appendChild(sessionItem);
+          tabContainer.appendChild(tabList);
         });
+      } else {
+        const tabContainer = document.querySelector('#remote-tabs .tab-container');
+        tabContainer.innerHTML = `<h3>Mes sessions</h3><p>Aucune session trouvée.</p>`;
       }
     });
   };
 
-  // Bouton pour ouvrir tous les onglets distants
+  // Bouton pour ouvrir tous les onglets de la session
   openAllRemoteTabsButton.onclick = () => {
-    if (remoteTabsData.length === 0) {
-      alert("Aucun onglet distant à ouvrir.");
-      return;
-    }
-    remoteTabsData.forEach(tab => {
-      chrome.tabs.create({ url: tab.url });
+    const sessionName = sessionSelect.value;
+    database.ref(`users/${userId}/sessions/${sessionName}`).once('value', (snapshot) => {
+      const tabsData = snapshot.val() || [];
+      if (tabsData.length === 0) {
+        alert("Aucun onglet dans cette session.");
+        return;
+      }
+      if (confirm(`Ouvrir tous les ${tabsData.length} onglets de cette session ?`)) {
+        tabsData.forEach(tab => chrome.tabs.create({ url: tab.url }));
+      }
     });
-    alert(`Tous les onglets distants ont été ouverts !`);
   };
 
-  // Met à jour les onglets distants au démarrage et quand l'ID change
-  userIdInput.addEventListener('input', updateRemoteTabs);
-  updateRemoteTabs(); // Charge les onglets distants au démarrage
-});
+  // Met à jour les onglets distants quand la session change
+  sessionSelect.addEventListener('change', updateRemoteTabs);
+  updateRemoteTabs(); // Charge les onglets au démarrage
+}

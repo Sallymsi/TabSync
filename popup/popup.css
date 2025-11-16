@@ -20,6 +20,32 @@ body {
   background-color: #3367d6;
 }
 
+#open-all-remote-tabs {
+  margin-bottom: 15px;
+  padding: 10px;
+  width: 100%;
+  background-color: #34a853;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+#open-all-remote-tabs:hover {
+  background-color: #2d9248;
+}
+
+#session-select {
+  margin-bottom: 15px;
+  padding: 8px;
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  font-size: 16px;
+}
+
 .tab-container {
   margin-bottom: 20px;
 }
@@ -31,6 +57,7 @@ body {
   padding-bottom: 5px;
 }
 
+/* Styles existants pour les onglets (locaux et distants) */
 .tab {
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -51,26 +78,67 @@ body {
   color: #333;
 }
 
+/* Masquer les URLs (plus utilisé, mais gardé au cas où) */
 .tab-url {
+  display: none; /* Masqué par défaut */
   font-size: 14px;
   color: #666;
   word-break: break-all;
 }
 
-#open-all-remote-tabs {
-  margin-bottom: 15px;
-  padding: 10px;
-  width: 100%;
-  background-color: #34a853; /* Vert */
-  color: white;
-  border: none;
+/* Nouveaux styles pour les thématiques (sessions) */
+.session-item {
+  border: 1px solid #ddd;
   border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background-color: #f0f0f0; /* Gris clair pour différencier des onglets */
   cursor: pointer;
-  font-size: 16px;
-  margin-top: 10px;
+  transition: background-color 0.2s;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-#open-all-remote-tabs:hover {
-  background-color: #2d9248;
+.session-item:hover {
+  background-color: #e0e0e0;
 }
 
+.session-item::after {
+  content: "▼"; /* Flèche vers le bas */
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+.session-item.expanded::after {
+  content: "▲"; /* Flèche vers le haut quand déroulé */
+}
+
+/* Style pour la liste des onglets (masquée par défaut) */
+.tab-list {
+  display: none;
+  margin-bottom: 8px;
+  border-left: 3px solid #4285f4;
+  padding-left: 10px;
+  margin-left: 10px;
+}
+
+/* Style pour les onglets locaux (similaire à avant, mais sans URL) */
+.local-tab {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+}
+
+.local-tab:hover {
+  background-color: #e6f2ff;
+}
+
+.local-tab-title {
+  font-weight: bold;
+  color: #333;
+}
