@@ -15,8 +15,11 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 const auth = firebase.auth();
 
-// Gestion de l'UID avec chrome.storage.sync
-chrome.storage.sync.get(['userId'], (result) => {
+// Gestion de l'UID avec chrome.storage.sync et affichage du contenu complet
+chrome.storage.sync.get(null, (result) => {
+  // Affiche TOUT le contenu de chrome.storage.sync dans la console
+  console.log("Contenu complet de chrome.storage.sync :", result);
+
   if (result.userId) {
     // Utilise l'UID existant
     console.log("UID récupéré depuis sync:", result.userId);
@@ -26,9 +29,16 @@ chrome.storage.sync.get(['userId'], (result) => {
     auth.signInAnonymously()
       .then(() => {
         const userId = auth.currentUser.uid;
+        // Affiche l'UID généré
+        console.log("Nouvel UID généré:", userId);
+
+        // Sauvegarde l'UID et affiche le contenu mis à jour
         chrome.storage.sync.set({ userId }, () => {
-          console.log("Nouvel UID généré et synchronisé:", userId);
-          initApp(userId);
+          chrome.storage.sync.get(null, (updatedResult) => {
+            console.log("Contenu mis à jour de chrome.storage.sync :", updatedResult);
+            console.log("Nouvel UID généré et synchronisé:", userId);
+            initApp(userId);
+          });
         });
       })
       .catch(error => {
@@ -37,6 +47,7 @@ chrome.storage.sync.get(['userId'], (result) => {
       });
   }
 });
+
 
 // Bouton pour réinitialiser l'UID (optionnel)
 document.addEventListener('DOMContentLoaded', () => {
