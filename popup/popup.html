@@ -8,19 +8,25 @@
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
-    <h1>TabSync MVP</h1>
-    <div>
-      <label for="session-select">Session :</label>
-      <select id="session-select">
-        <option value="travail">Travail</option>
-        <option value="loisirs">Loisirs</option>
-        <option value="voyage">Voyage</option>
-        <option value="autre">Autre</option>
-      </select>
+    <div id="auth-container">
+      <button id="google-signin" style="background: #4285f4; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">
+        Se connecter avec Google
+      </button>
     </div>
-    <button id="sync-button">Synchroniser mes onglets</button>
-    <button id="open-all-remote-tabs">Ouvrir tous les onglets distants</button>
-    <div id="local-tabs"></div>
-    <div id="remote-tabs"></div>
+    <div id="app-container" style="display: none;">
+      <div>
+        <label for="session-select">Session :</label>
+        <select id="session-select">
+          <option value="travail">Travail</option>
+          <option value="loisirs">Loisirs</option>
+          <option value="voyage">Voyage</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <button id="sync-button">Synchroniser mes onglets</button>
+      <button id="open-all-remote-tabs">Ouvrir tous les onglets</button>
+      <div id="local-tabs"></div>
+      <div id="remote-tabs"></div>
+    </div>
   </body>
 </html>
