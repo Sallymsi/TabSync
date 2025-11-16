@@ -1,0 +1,34 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCkqjFzv8g5-WlCFrnM25-44zA2qa03NC8",
+  authDomain: "tabsync-294cc.firebaseapp.com",
+  databaseURL: "https://tabsync-294cc-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "tabsync-294cc",
+  storageBucket: "tabsync-294cc.firebasestorage.app",
+  messagingSenderId: "644042425984",
+  appId: "1:644042425984:web:d03d6b4e55b9238bb80865",
+  measurementId: "G-WT43P1RZDV"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+
+
+
+
+
+{
+  "rules": {
+    ".read": "now < 1765839600000",  // 2025-12-16
+    ".write": "now < 1765839600000",  // 2025-12-16
+  }
+}
