@@ -12,24 +12,24 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// Initialisation de l'UID (à placer avant tout le reste)
+// Génère ou récupère l'UID
 chrome.storage.sync.get(['userId'], (result) => {
   if (!result.userId) {
-    firebase.auth().signInAnonymously().then(() => {
-      const userId = firebase.auth().currentUser.uid;
-      chrome.storage.sync.set({ userId }, () => {
-        console.log("UID généré et synchronisé :", userId);
-        initApp(userId); // Passe l'UID à initApp
-      });
-    }).catch(error => console.error("Erreur d'authentification :", error));
+    // Génère un nouvel UID si aucun n'existe
+    const newUserId = 'user-' + Math.random().toString(36).substr(2, 12);
+    chrome.storage.sync.set({ userId: newUserId }, () => {
+      console.log("Nouvel UID généré et synchronisé :", newUserId);
+      initApp(newUserId);
+    });
   } else {
-    const userId = result.userId;
-    console.log("UID existant récupéré :", userId);
-    initApp(userId); // Passe l'UID à initApp
+    // Utilise l'UID existant
+    console.log("UID récupéré depuis sync :", result.userId);
+    initApp(result.userId);
   }
 });
 
 function initApp(userId) {
+  // Le reste de ton code...
   const syncButton = document.getElementById('sync-button');
   const openAllRemoteTabsButton = document.getElementById('open-all-remote-tabs');
   const sessionSelect = document.getElementById('session-select');
@@ -59,12 +59,12 @@ function initApp(userId) {
     chrome.tabs.query({}, (tabs) => {
       const tabsData = tabs.map(tab => ({ url: tab.url, title: tab.title }));
       database.ref(`users/${userId}/sessions/${sessionName}`).set(tabsData)
-        .then(() => alert(`Onglets synchronisés dans la session "${sessionName}" !`))
+        .then(() => alert(`Onglets synchronisés !`))
         .catch(error => console.error("Erreur :", error));
     });
   };
 
-  // Récupère les onglets distants depuis Firebase
+  // Affiche les onglets distants
   const updateRemoteTabs = () => {
     database.ref(`users/${userId}/sessions`).on('value', (snapshot) => {
       remoteTabsDiv.innerHTML = `
@@ -106,7 +106,7 @@ function initApp(userId) {
     });
   };
 
-  // Bouton pour ouvrir tous les onglets de la session
+  // Bouton pour ouvrir tous les onglets
   openAllRemoteTabsButton.onclick = () => {
     const sessionName = sessionSelect.value;
     database.ref(`users/${userId}/sessions/${sessionName}`).once('value', (snapshot) => {
@@ -115,13 +115,12 @@ function initApp(userId) {
         alert("Aucun onglet dans cette session.");
         return;
       }
-      if (confirm(`Ouvrir tous les ${tabsData.length} onglets de cette session ?`)) {
+      if (confirm(`Ouvrir tous les ${tabsData.length} onglets ?`)) {
         tabsData.forEach(tab => chrome.tabs.create({ url: tab.url }));
       }
     });
   };
 
-  // Met à jour les onglets distants quand la session change
   sessionSelect.addEventListener('change', updateRemoteTabs);
-  updateRemoteTabs(); // Charge les onglets au démarrage
+  updateRemoteTabs();
 }
