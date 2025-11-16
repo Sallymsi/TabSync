@@ -1,0 +1,76 @@
+body {
+  width: 400px;
+  padding: 15px;
+  font-family: Arial, sans-serif;
+}
+
+#sync-button {
+  margin-bottom: 15px;
+  padding: 10px;
+  width: 100%;
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#sync-button:hover {
+  background-color: #3367d6;
+}
+
+.tab-container {
+  margin-bottom: 20px;
+}
+
+.tab-container h3 {
+  margin-bottom: 10px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.tab {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tab:hover {
+  background-color: #e6f2ff;
+}
+
+.tab-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.tab-url {
+  font-size: 14px;
+  color: #666;
+  word-break: break-all;
+}
+
+#open-all-remote-tabs {
+  margin-bottom: 15px;
+  padding: 10px;
+  width: 100%;
+  background-color: #34a853; /* Vert */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+#open-all-remote-tabs:hover {
+  background-color: #2d9248;
+}
+

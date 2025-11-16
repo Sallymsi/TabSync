@@ -1,17 +1,3 @@
-// // Récupérer les onglets locaux
-// chrome.tabs.query({}, (tabs) => {
-//   const localTabs = tabs.map(tab => ({ url: tab.url, title: tab.title }));
-//   console.log("Onglets locaux :", localTabs);
-// });
-
-// // Bouton pour synchroniser
-// document.getElementById("sync-button").addEventListener("click", () => {
-//   chrome.tabs.query({}, (tabs) => {
-//     const tabsData = tabs.map(tab => ({ url: tab.url, title: tab.title }));
-//     // Envoyer à Firebase ici
-//   });
-// });
-
 const firebaseConfig = {
   apiKey: "AIzaSyCkqjFzv8g5-WlCFrnM25-44zA2qa03NC8",
   authDomain: "tabsync-294cc.firebaseapp.com",
@@ -26,49 +12,85 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-
-
 document.addEventListener('DOMContentLoaded', () => {
   const syncButton = document.getElementById('sync-button');
+  const openAllRemoteTabsButton = document.getElementById('open-all-remote-tabs');
+  const userIdInput = document.getElementById('user-id');
   const localTabsDiv = document.getElementById('local-tabs');
   const remoteTabsDiv = document.getElementById('remote-tabs');
 
-  // 1. Affiche les onglets locaux
+  let remoteTabsData = []; // Variable pour stocker les onglets distants
+
+  // Affiche les onglets locaux
   chrome.tabs.query({}, (tabs) => {
-    localTabsDiv.innerHTML = "<h3>Onglets locaux :</h3>";
+    localTabsDiv.innerHTML = `
+      <div class="tab-container">
+        <h3>Onglets locaux</h3>
+      </div>
+    `;
     tabs.forEach(tab => {
+      const tabContainer = document.querySelector('#local-tabs .tab-container');
       const tabElement = document.createElement('div');
       tabElement.className = 'tab';
-      tabElement.textContent = tab.title;
+      tabElement.innerHTML = `
+        <div class="tab-title">${tab.title}</div>
+        <div class="tab-url">${tab.url}</div>
+      `;
       tabElement.onclick = () => chrome.tabs.update(tab.id, { active: true });
-      localTabsDiv.appendChild(tabElement);
+      tabContainer.appendChild(tabElement);
     });
   });
 
-  // 2. Synchronise les onglets vers Firebase
+  // Synchronise les onglets vers Firebase
   syncButton.onclick = () => {
+    const userId = userIdInput.value.trim() || "test-user";
     chrome.tabs.query({}, (tabs) => {
-      const userId = "test-user"; // ID temporaire pour le MVP
       const tabsData = tabs.map(tab => ({ url: tab.url, title: tab.title }));
       database.ref(`users/${userId}/tabs`).set(tabsData)
-        .then(() => alert("Onglets synchronisés !"))
+        .then(() => alert(`Onglets synchronisés avec l'ID : ${userId}`))
         .catch(error => console.error("Erreur :", error));
     });
   };
 
-  // 3. Récupère les onglets distants depuis Firebase
-  const userId = "test-user"; // Même ID que ci-dessus
-  database.ref(`users/${userId}/tabs`).on('value', (snapshot) => {
-    remoteTabsDiv.innerHTML = "<h3>Onglets distants :</h3>";
-    const remoteTabs = snapshot.val();
-    if (remoteTabs) {
-      remoteTabs.forEach(tab => {
-        const tabElement = document.createElement('div');
-        tabElement.className = 'tab';
-        tabElement.textContent = tab.title;
-        tabElement.onclick = () => chrome.tabs.create({ url: tab.url });
-        remoteTabsDiv.appendChild(tabElement);
-      });
+  // Récupère les onglets distants depuis Firebase
+  const updateRemoteTabs = () => {
+    const userId = userIdInput.value.trim() || "test-user";
+    database.ref(`users/${userId}/tabs`).on('value', (snapshot) => {
+      remoteTabsData = snapshot.val() || []; // Stocke les onglets distants
+      remoteTabsDiv.innerHTML = `
+        <div class="tab-container">
+          <h3>Onglets distants (ID : ${userId})</h3>
+        </div>
+      `;
+      if (remoteTabsData.length > 0) {
+        const tabContainer = document.querySelector('#remote-tabs .tab-container');
+        remoteTabsData.forEach(tab => {
+          const tabElement = document.createElement('div');
+          tabElement.className = 'tab';
+          tabElement.innerHTML = `
+            <div class="tab-title">${tab.title}</div>
+            <div class="tab-url">${tab.url}</div>
+          `;
+          tabElement.onclick = () => chrome.tabs.create({ url: tab.url });
+          tabContainer.appendChild(tabElement);
+        });
+      }
+    });
+  };
+
+  // Bouton pour ouvrir tous les onglets distants
+  openAllRemoteTabsButton.onclick = () => {
+    if (remoteTabsData.length === 0) {
+      alert("Aucun onglet distant à ouvrir.");
+      return;
     }
-  });
+    remoteTabsData.forEach(tab => {
+      chrome.tabs.create({ url: tab.url });
+    });
+    alert(`Tous les onglets distants ont été ouverts !`);
+  };
+
+  // Met à jour les onglets distants au démarrage et quand l'ID change
+  userIdInput.addEventListener('input', updateRemoteTabs);
+  updateRemoteTabs(); // Charge les onglets distants au démarrage
 });
