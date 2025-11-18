@@ -9,9 +9,13 @@
   </head>
   <body>
     <div id="auth-container">
-      <button id="google-signin" style="background: #4285f4; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">
-        Se connecter avec Google
-      </button>
+        <button id="google-signin" style="background: #4285f4; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">
+          Se connecter avec Google
+        </button>
+        <div id="manual-uid-container" style="margin-top: 10px; display: none;">
+          <input type="text" id="manual-uid" placeholder="UID manuel" style="width: 70%; padding: 5px;">
+          <button id="use-manual-uid" style="width: 28%; padding: 5px; margin-left: 2%;">Utiliser</button>
+        </div>
     </div>
     <div id="app-container" style="display: none;">
       <div>

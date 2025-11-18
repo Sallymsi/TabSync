@@ -13,51 +13,55 @@ document.addEventListener('DOMContentLoaded', () => {
   // Variables globales
   let userId = null;
   let userEmail = null;
+  let isLoggedIn = false;
 
   // Bouton de connexion Google
   document.getElementById('google-signin').addEventListener('click', () => {
     chrome.identity.getAuthToken({ interactive: true }, (token) => {
       if (chrome.runtime.lastError) {
         console.error("Erreur d'authentification :", chrome.runtime.lastError);
-        alert("Erreur d'authentification : " + chrome.runtime.lastError.message);
+        document.getElementById('manual-uid-container').style.display = 'block';
         return;
       }
 
-      // Récupère les infos de l'utilisateur
-      fetch(`https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${token}`)
-        .then(response => response.json())
-        .then(userInfo => {
-          userId = userInfo.id; // Utilise l'ID Google comme UID
-          userEmail = userInfo.email;
-
-          // Cache la section d'authentification et affiche l'app
-          document.getElementById('auth-container').style.display = 'none';
-          document.getElementById('app-container').style.display = 'block';
-
-          // Initialise l'application
-          initApp();
-        })
-        .catch(error => {
-          console.error("Erreur lors de la récupération des infos utilisateur :", error);
-          alert("Erreur lors de la récupération des infos utilisateur.");
-        });
-    });
-  });
-
-  // Vérifie si l'utilisateur est déjà connecté
-  chrome.identity.getAuthToken({ interactive: false }, (token) => {
-    if (!chrome.runtime.lastError && token) {
       fetch(`https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${token}`)
         .then(response => response.json())
         .then(userInfo => {
           userId = userInfo.id;
           userEmail = userInfo.email;
-
-          // Cache la section d'authentification et affiche l'app
+          isLoggedIn = true;
           document.getElementById('auth-container').style.display = 'none';
           document.getElementById('app-container').style.display = 'block';
+          initApp();
+        })
+        .catch(error => {
+          console.error("Erreur lors de la récupération des infos utilisateur :", error);
+          document.getElementById('manual-uid-container').style.display = 'block';
+        });
+    });
+  });
 
-          // Initialise l'application
+  // Bouton pour utiliser un UID manuel
+  document.getElementById('use-manual-uid').addEventListener('click', () => {
+    userId = document.getElementById('manual-uid').value;
+    userEmail = "manual@" + userId + ".com";
+    isLoggedIn = true;
+    document.getElementById('auth-container').style.display = 'none';
+    document.getElementById('app-container').style.display = 'block';
+    initApp();
+  });
+
+  // Vérifie si l'utilisateur est déjà connecté
+  chrome.identity.getAuthToken({ interactive: false }, (token) => {
+    if (!chrome.runtime.lastError && token && !isLoggedIn) {
+      fetch(`https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${token}`)
+        .then(response => response.json())
+        .then(userInfo => {
+          userId = userInfo.id;
+          userEmail = userInfo.email;
+          isLoggedIn = true;
+          document.getElementById('auth-container').style.display = 'none';
+          document.getElementById('app-container').style.display = 'block';
           initApp();
         })
         .catch(error => {
@@ -67,6 +71,54 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function initApp() {
+    // Ajout du bouton de déconnexion
+    const logoutButton = document.createElement('button');
+    logoutButton.id = 'logout-button';
+    logoutButton.textContent = 'Se déconnecter';
+    logoutButton.style.cssText = `
+      background: #f44336;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      float: right;
+    `;
+
+    logoutButton.addEventListener('click', () => {
+      // Supprimer le token
+      chrome.identity.removeCachedAuthToken({ token: '' }, () => {
+        // Réinitialiser les variables
+        userId = null;
+        userEmail = null;
+        isLoggedIn = false;
+
+        // Cacher l'application et afficher la connexion
+        document.getElementById('app-container').style.display = 'none';
+        document.getElementById('auth-container').style.display = 'block';
+        document.getElementById('manual-uid-container').style.display = 'none';
+        document.getElementById('manual-uid').value = '';
+
+        // Supprimer le bouton de déconnexion
+        if (document.getElementById('logout-button')) {
+          document.getElementById('logout-button').remove();
+        }
+
+        // Forcer le rechargement de la popup après un court délai
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+      });
+    });
+
+    // Ajouter le bouton à l'interface
+    const appContainer = document.getElementById('app-container');
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = 'width: 100%; margin-bottom: 10px;';
+    headerDiv.appendChild(logoutButton);
+    appContainer.insertBefore(headerDiv, appContainer.firstChild);
+
     const syncButton = document.getElementById('sync-button');
     const openAllRemoteTabsButton = document.getElementById('open-all-remote-tabs');
     const sessionSelect = document.getElementById('session-select');
@@ -116,9 +168,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const sessionItem = document.createElement('div');
             sessionItem.className = 'session-item';
             sessionItem.textContent = sessionName.charAt(0).toUpperCase() + sessionName.slice(1);
-
             const tabList = document.createElement('div');
             tabList.className = 'tab-list';
+            tabList.style.display = 'none';
 
             sessions[sessionName].forEach(tab => {
               const tabElement = document.createElement('div');
@@ -159,10 +211,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Met à jour les onglets distants quand la session change
     sessionSelect.addEventListener('change', updateRemoteTabs);
-
-    // Charge les onglets distants au démarrage
     updateRemoteTabs();
   }
 });
-
-
