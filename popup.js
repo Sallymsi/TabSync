@@ -1,7 +1,12 @@
 // Firebase configuration - À REMPLACER avec vos propres valeurs
 const FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  projectId: "YOUR_PROJECT_ID"
+  apiKey: "AIzaSyCkqjFzv8g5-WlCFrnM25-44zA2qa03NC8",
+  authDomain: "tabsync-294cc.firebaseapp.com",
+  databaseURL: "https://tabsync-294cc-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "tabsync-294cc",
+  storageBucket: "tabsync-294cc.firebasestorage.app",
+  messagingSenderId: "644042425984",
+  appId: "1:644042425984:web:d03d6b4e55b9238bb80865"
 };
 
 // State
@@ -33,9 +38,13 @@ const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 // Firebase REST API Helper Functions
 // ============================================
 
-// Firestore REST API base URL
-function getFirestoreUrl(path) {
-  return `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents${path}`;
+// Firestore REST API base URL (avec API Key pour authentification simplifiée)
+function getFirestoreUrl(path, useApiKey = true) {
+  const baseUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents${path}`;
+  if (useApiKey) {
+    return `${baseUrl}?key=${FIREBASE_CONFIG.apiKey}`;
+  }
+  return baseUrl;
 }
 
 // Convert Firestore document to JS object
@@ -235,12 +244,26 @@ async function loadCurrentTabs() {
     const tabs = await chrome.tabs.query({ currentWindow: true });
     tabsCount.textContent = tabs.length;
     
-    currentTabsDiv.innerHTML = tabs.map(tab => `
-      <div class="tab-item" title="${escapeHtml(tab.url || '')}">
-        <img class="tab-favicon" src="${tab.favIconUrl || 'icons/default-favicon.png'}" alt="" onerror="this.src='icons/default-favicon.png'">
-        <span class="tab-title">${escapeHtml(tab.title || tab.url || 'Sans titre')}</span>
-      </div>
-    `).join('');
+    currentTabsDiv.innerHTML = tabs.map(tab => {
+      const faviconUrl = tab.favIconUrl || '';
+      return `
+        <div class="tab-item" title="${escapeHtml(tab.url || '')}">
+          <img class="tab-favicon" src="${faviconUrl}" alt="" data-fallback="true">
+          <span class="tab-title">${escapeHtml(tab.title || tab.url || 'Sans titre')}</span>
+        </div>
+      `;
+    }).join('');
+    
+    // Handle favicon errors without inline handlers
+    currentTabsDiv.querySelectorAll('.tab-favicon').forEach(img => {
+      img.addEventListener('error', function() {
+        this.style.display = 'none';
+      });
+      // If no src, hide immediately
+      if (!img.src || img.src === window.location.href) {
+        img.style.display = 'none';
+      }
+    });
   } catch (error) {
     console.error('Error loading tabs:', error);
     currentTabsDiv.innerHTML = '<p class="empty-state">Erreur lors du chargement des onglets</p>';
@@ -259,11 +282,7 @@ async function loadSessions() {
     sessionsList.innerHTML = '<p class="loading">Chargement...</p>';
     
     const url = getFirestoreUrl(`/users/${currentUser.uid}/sessions`);
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${currentUser.token}`
-      }
-    });
+    const response = await fetch(url);
     
     if (!response.ok) {
       if (response.status === 404) {
@@ -370,7 +389,6 @@ async function saveCurrentTabs(name) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${currentUser.token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(objectToFirestoreDoc(sessionData))
@@ -438,10 +456,7 @@ async function deleteSession(sessionId) {
   try {
     const url = getFirestoreUrl(`/users/${currentUser.uid}/sessions/${sessionId}`);
     const response = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${currentUser.token}`
-      }
+      method: 'DELETE'
     });
     
     if (!response.ok) {
