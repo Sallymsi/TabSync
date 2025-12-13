@@ -1,13 +1,5 @@
-// Firebase configuration - À REMPLACER avec vos propres valeurs
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCkqjFzv8g5-WlCFrnM25-44zA2qa03NC8",
-  authDomain: "tabsync-294cc.firebaseapp.com",
-  databaseURL: "https://tabsync-294cc-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "tabsync-294cc",
-  storageBucket: "tabsync-294cc.firebasestorage.app",
-  messagingSenderId: "644042425984",
-  appId: "1:644042425984:web:d03d6b4e55b9238bb80865"
-};
+// Configuration Firebase chargée depuis config.js
+// Voir config.example.js pour le format
 
 // State
 let currentUser = null;

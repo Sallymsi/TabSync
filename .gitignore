@@ -1,0 +1,13 @@
+# Configuration sensible (clés API Firebase)
+config.js
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
