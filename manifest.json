@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Sync",
+  "version": "1.0.0",
+  "description": "Synchronisez vos onglets ouverts entre différents appareils avec Firebase",
+  "permissions": [
+    "tabs",
+    "storage",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://*.firebaseio.com/*",
+    "https://*.googleapis.com/*",
+    "https://firestore.googleapis.com/*",
+    "https://identitytoolkit.googleapis.com/*",
+    "https://securetoken.googleapis.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "oauth2": {
+    "client_id": "330837045726-hb4fv2h4dqtc7mtvouu03gmdm2qfgo4m.apps.googleusercontent.com",
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
+  }
+}
