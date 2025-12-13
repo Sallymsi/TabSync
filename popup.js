@@ -38,13 +38,48 @@ const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 // Firebase REST API Helper Functions
 // ============================================
 
-// Firestore REST API base URL (avec API Key pour authentification simplifiée)
-function getFirestoreUrl(path, useApiKey = true) {
-  const baseUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents${path}`;
-  if (useApiKey) {
-    return `${baseUrl}?key=${FIREBASE_CONFIG.apiKey}`;
+// Firestore REST API base URL
+function getFirestoreUrl(path) {
+  return `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents${path}`;
+}
+
+// Make authenticated request to Firestore
+async function firestoreRequest(path, options = {}) {
+  if (!currentUser || !currentUser.firebaseToken) {
+    throw new Error('User not authenticated');
   }
-  return baseUrl;
+  
+  const url = getFirestoreUrl(path);
+  const headers = {
+    'Authorization': `Bearer ${currentUser.firebaseToken}`,
+    ...options.headers
+  };
+  
+  const response = await fetch(url, { ...options, headers });
+  return response;
+}
+
+// Exchange Google OAuth token for Firebase ID token
+async function exchangeGoogleTokenForFirebase(googleAccessToken) {
+  const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${FIREBASE_CONFIG.apiKey}`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      postBody: `access_token=${googleAccessToken}&providerId=google.com`,
+      requestUri: chrome.identity.getRedirectURL(),
+      returnSecureToken: true,
+      returnIdpCredential: true
+    })
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'Firebase auth failed');
+  }
+  
+  return await response.json();
 }
 
 // Convert Firestore document to JS object
@@ -113,10 +148,13 @@ function objectToFirestoreDoc(obj) {
 // Check if user is already signed in (from storage)
 async function checkAuthState() {
   try {
-    const result = await chrome.storage.local.get(['user', 'token']);
-    if (result.user && result.token) {
-      currentUser = result.user;
-      currentUser.token = result.token;
+    const result = await chrome.storage.local.get(['user', 'firebaseToken', 'googleToken']);
+    if (result.user && result.firebaseToken) {
+      currentUser = {
+        ...result.user,
+        firebaseToken: result.firebaseToken,
+        googleToken: result.googleToken
+      };
       showUserSection();
       loadSessions();
       loadCurrentTabs();
@@ -133,7 +171,7 @@ async function signInWithGoogle() {
     loginBtn.textContent = 'Connexion en cours...';
     
     // Get OAuth token from Chrome
-    const token = await new Promise((resolve, reject) => {
+    const googleToken = await new Promise((resolve, reject) => {
       chrome.identity.getAuthToken({ interactive: true }, (token) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
@@ -143,34 +181,28 @@ async function signInWithGoogle() {
       });
     });
     
-    // Get user info from Google
-    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    if (!userInfoResponse.ok) {
-      throw new Error('Failed to get user info');
-    }
-    
-    const userInfo = await userInfoResponse.json();
+    // Exchange Google token for Firebase token
+    const firebaseAuth = await exchangeGoogleTokenForFirebase(googleToken);
     
     currentUser = {
-      uid: userInfo.id,
-      email: userInfo.email,
-      displayName: userInfo.name,
-      photoURL: userInfo.picture,
-      token: token
+      uid: firebaseAuth.localId,  // Firebase UID
+      email: firebaseAuth.email,
+      displayName: firebaseAuth.displayName || firebaseAuth.email.split('@')[0],
+      photoURL: firebaseAuth.photoUrl,
+      firebaseToken: firebaseAuth.idToken,
+      googleToken: googleToken
     };
     
     // Save to storage
     await chrome.storage.local.set({ 
       user: {
-        uid: userInfo.id,
-        email: userInfo.email,
-        displayName: userInfo.name,
-        photoURL: userInfo.picture
+        uid: firebaseAuth.localId,
+        email: firebaseAuth.email,
+        displayName: currentUser.displayName,
+        photoURL: firebaseAuth.photoUrl
       }, 
-      token: token 
+      firebaseToken: firebaseAuth.idToken,
+      googleToken: googleToken
     });
     
     showUserSection();
@@ -199,15 +231,15 @@ async function signInWithGoogle() {
 async function signOutUser() {
   try {
     // Revoke Chrome token
-    const result = await chrome.storage.local.get(['token']);
-    if (result.token) {
-      chrome.identity.removeCachedAuthToken({ token: result.token }, () => {
-        fetch(`https://accounts.google.com/o/oauth2/revoke?token=${result.token}`);
+    const result = await chrome.storage.local.get(['googleToken']);
+    if (result.googleToken) {
+      chrome.identity.removeCachedAuthToken({ token: result.googleToken }, () => {
+        fetch(`https://accounts.google.com/o/oauth2/revoke?token=${result.googleToken}`);
       });
     }
     
     // Clear storage
-    await chrome.storage.local.remove(['user', 'token']);
+    await chrome.storage.local.remove(['user', 'firebaseToken', 'googleToken']);
     currentUser = null;
     
     showAuthSection();
@@ -281,8 +313,7 @@ async function loadSessions() {
   try {
     sessionsList.innerHTML = '<p class="loading">Chargement...</p>';
     
-    const url = getFirestoreUrl(`/users/${currentUser.uid}/sessions`);
-    const response = await fetch(url);
+    const response = await firestoreRequest(`/users/${currentUser.uid}/sessions`);
     
     if (!response.ok) {
       if (response.status === 404) {
@@ -343,14 +374,14 @@ function createSessionElement(id, session) {
     <div class="session-info">
       <span class="session-name">${escapeHtml(session.name || 'Session sans nom')}</span>
       <div class="session-meta">
-        <span>📑 ${tabCount} onglets</span>
+        <span> ${tabCount} onglets</span>
         <span>📅 ${formattedDate}</span>
-        ${session.device ? `<span class="device-badge">💻 ${escapeHtml(session.device)}</span>` : ''}
+        ${session.device ? `<span class="device-badge">${escapeHtml(session.device)}</span>` : ''}
       </div>
     </div>
     <div class="session-actions">
       <button class="btn btn-small btn-primary restore-btn" title="Restaurer">📂</button>
-      <button class="btn btn-small btn-danger delete-btn" title="Supprimer">🗑️</button>
+      <button class="btn btn-small btn-danger delete-btn" title="Supprimer">X</button>
     </div>
   `;
   
@@ -385,8 +416,7 @@ async function saveCurrentTabs(name) {
       createdAt: new Date().toISOString()
     };
     
-    const url = getFirestoreUrl(`/users/${currentUser.uid}/sessions`);
-    const response = await fetch(url, {
+    const response = await firestoreRequest(`/users/${currentUser.uid}/sessions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -454,8 +484,7 @@ async function deleteSession(sessionId) {
   if (!currentUser || !sessionId) return;
   
   try {
-    const url = getFirestoreUrl(`/users/${currentUser.uid}/sessions/${sessionId}`);
-    const response = await fetch(url, {
+    const response = await firestoreRequest(`/users/${currentUser.uid}/sessions/${sessionId}`, {
       method: 'DELETE'
     });
     
