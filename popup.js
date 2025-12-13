@@ -43,20 +43,75 @@ function getFirestoreUrl(path) {
   return `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents${path}`;
 }
 
-// Make authenticated request to Firestore
+// Make authenticated request to Firestore with auto-refresh
 async function firestoreRequest(path, options = {}) {
   if (!currentUser || !currentUser.firebaseToken) {
     throw new Error('User not authenticated');
   }
   
   const url = getFirestoreUrl(path);
-  const headers = {
+  let headers = {
     'Authorization': `Bearer ${currentUser.firebaseToken}`,
     ...options.headers
   };
   
-  const response = await fetch(url, { ...options, headers });
+  let response = await fetch(url, { ...options, headers });
+  
+  // If 401, try to refresh token and retry
+  if (response.status === 401) {
+    console.log('Token expired, refreshing...');
+    const refreshed = await refreshFirebaseToken();
+    if (refreshed) {
+      headers = {
+        'Authorization': `Bearer ${currentUser.firebaseToken}`,
+        ...options.headers
+      };
+      response = await fetch(url, { ...options, headers });
+    } else {
+      // Force re-login
+      await chrome.storage.local.remove(['user', 'firebaseToken', 'googleToken']);
+      currentUser = null;
+      showAuthSection();
+      showToast('Session expirée, veuillez vous reconnecter', 'error');
+      throw new Error('Session expired');
+    }
+  }
+  
   return response;
+}
+
+// Refresh Firebase token if expired
+async function refreshFirebaseToken() {
+  try {
+    // Get a fresh Google token
+    const googleToken = await new Promise((resolve, reject) => {
+      chrome.identity.getAuthToken({ interactive: false }, (token) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(token);
+        }
+      });
+    });
+    
+    // Exchange for new Firebase token
+    const firebaseAuth = await exchangeGoogleTokenForFirebase(googleToken);
+    
+    // Update current user
+    currentUser.firebaseToken = firebaseAuth.idToken;
+    currentUser.googleToken = googleToken;
+    
+    // Save to storage
+    await chrome.storage.local.set({
+      firebaseToken: firebaseAuth.idToken,
+      googleToken: googleToken
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    return false;
+  }
 }
 
 // Exchange Google OAuth token for Firebase ID token
