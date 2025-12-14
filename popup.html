@@ -9,10 +9,9 @@
 <body>
   <div class="container">
     <header>
-      <h1>Tab Sync</h1>
+      <h1>Synchro Tabs</h1>
     </header>
 
-    <!-- Section de connexion -->
     <div id="auth-section" class="section">
       <button id="login-btn" class="btn btn-primary">
         <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
@@ -25,7 +24,6 @@
       </button>
     </div>
 
-    <!-- Section utilisateur connecté -->
     <div id="user-section" class="section hidden">
       <div class="user-info">
         <img id="user-avatar" src="" alt="Avatar" class="avatar">
@@ -36,7 +34,6 @@
         <button id="logout-btn" class="btn btn-small btn-secondary">Déconnexion</button>
       </div>
 
-      <!-- Actions principales -->
       <div class="actions">
         <button id="save-tabs-btn" class="btn btn-primary btn-block">
           Sauvegarder les onglets actuels
@@ -46,7 +43,6 @@
         </button>
       </div>
 
-      <!-- Liste des sessions sauvegardées -->
       <div class="sessions-container">
         <h3>Sessions sauvegardées</h3>
         <div id="sessions-list" class="sessions-list">
@@ -54,16 +50,13 @@
         </div>
       </div>
 
-      <!-- Onglets de la session actuelle -->
       <div class="current-tabs-container">
         <h3>Onglets actuels (<span id="tabs-count">0</span>)</h3>
         <div id="current-tabs" class="tabs-list">
-          <!-- Les onglets seront affichés ici -->
         </div>
       </div>
     </div>
 
-    <!-- Modal pour nommer la session -->
     <div id="save-modal" class="modal hidden">
       <div class="modal-content">
         <h3>Sauvegarder la session</h3>
@@ -75,7 +68,6 @@
       </div>
     </div>
 
-    <!-- Modal de confirmation de suppression -->
     <div id="delete-modal" class="modal hidden">
       <div class="modal-content">
         <h3>Supprimer la session</h3>
@@ -88,7 +80,7 @@
     </div>
 
     <footer>
-      <p>Tab Sync v1.0</p>
+      <p>Synchro Tabs v1.0</p>
     </footer>
   </div>
 

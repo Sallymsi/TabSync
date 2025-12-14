@@ -1,7 +1,3 @@
-// Configuration Firebase chargée depuis config.js
-// Voir config.example.js pour le format
-
-// State
 let currentUser = null;
 let sessionToDelete = null;
 
@@ -26,9 +22,9 @@ const confirmSaveBtn = document.getElementById('confirm-save-btn');
 const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 
-// ============================================
-// Firebase REST API Helper Functions
-// ============================================
+// ==================
+// Firebase REST API
+// ==================
 
 // Firestore REST API base URL
 function getFirestoreUrl(path) {
@@ -188,9 +184,9 @@ function objectToFirestoreDoc(obj) {
   return { fields };
 }
 
-// ============================================
+// ==================
 // Authentication
-// ============================================
+// ==================
 
 // Check if user is already signed in (from storage)
 async function checkAuthState() {

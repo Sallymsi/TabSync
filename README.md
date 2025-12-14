@@ -1,192 +1,142 @@
 # Tab Sync - Extension Chrome
 
-🔄 **Synchronisez vos onglets entre différents appareils avec Firebase**
+🔄 **Synchronisez vos onglets entre différents appareils grâce au cloud**
 
-## Fonctionnalités
+Une extension Chrome puissante qui vous permet de sauvegarder, synchroniser et restaurer vos sessions de navigation sur tous vos appareils connectés à votre compte Google.
 
-- ✅ Connexion sécurisée avec Google (Firebase Auth)
-- ✅ Sauvegarde des onglets ouverts dans le cloud (Firestore)
-- ✅ Restauration des sessions sur n'importe quel appareil
-- ✅ Identification de l'appareil source
-- ✅ Interface moderne et intuitive
+---
 
-## Installation
+## 🎯 Fonctionnalités
 
-### 1. Configuration Firebase
+### 🔐 Authentification Sécurisée
 
-#### Créer un projet Firebase
+L'extension utilise **Firebase Authentication** avec connexion Google pour garantir la sécurité de vos données :
 
-1. Allez sur [Firebase Console](https://console.firebase.google.com/)
-2. Cliquez sur **"Ajouter un projet"**
-3. Donnez un nom à votre projet (ex: "tab-sync")
-4. Désactivez Google Analytics si vous le souhaitez
-5. Cliquez sur **"Créer un projet"**
+- **Connexion en un clic** : Utilisez votre compte Google existant, aucune inscription supplémentaire requise
+- **Tokens sécurisés** : Les tokens d'authentification sont automatiquement rafraîchis pour maintenir votre session active
+- **Données privées** : Chaque utilisateur n'a accès qu'à ses propres sessions grâce aux règles de sécurité Firestore
+- **Déconnexion complète** : Révocation des tokens lors de la déconnexion pour une sécurité maximale
 
-#### Configurer l'authentification
+---
 
-1. Dans la console Firebase, allez dans **Authentication** > **Sign-in method**
-2. Activez **Google** comme fournisseur de connexion
-3. Configurez l'email d'assistance et sauvegardez
+### 💾 Sauvegarde des Sessions
 
-#### Configurer Firestore
+Capturez l'état complet de votre navigation en un instant :
 
-1. Allez dans **Firestore Database**
-2. Cliquez sur **"Créer une base de données"**
-3. Choisissez **"Mode production"**
-4. Sélectionnez une région proche de vous
+- **Sauvegarde instantanée** : Un clic suffit pour sauvegarder tous vos onglets ouverts
+- **Nommage personnalisé** : Donnez un nom significatif à chaque session (ex: "Projet travail", "Recherches vacances")
+- **Informations complètes** : Pour chaque onglet, l'extension sauvegarde :
+  - Le titre de la page
+  - L'URL complète
+  - L'icône (favicon) du site
+  - L'état épinglé de l'onglet
+- **Horodatage automatique** : Chaque session est datée pour un suivi précis
+- **Détection de l'appareil** : L'extension identifie automatiquement l'OS (Windows, macOS, Linux, ChromeOS, Android)
 
-#### Règles Firestore
+---
 
-Dans **Firestore Database** > **Règles**, remplacez le contenu par :
+### 🔄 Synchronisation Multi-Appareils
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId}/sessions/{sessionId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
-```
+Retrouvez vos onglets partout où vous êtes connecté :
 
-#### Récupérer les clés de configuration
+- **Cloud Firebase** : Vos sessions sont stockées de manière sécurisée dans Firestore
+- **Accès universel** : Connectez-vous sur n'importe quel appareil avec Chrome pour retrouver vos sessions
+- **Synchronisation en temps réel** : Rafraîchissez pour voir les sessions ajoutées depuis d'autres appareils
+- **Identification de la source** : Voyez sur quel appareil chaque session a été créée (badge Windows, macOS, etc.)
 
-1. Allez dans **Paramètres du projet** (⚙️) > **Général**
-2. Descendez jusqu'à **"Vos applications"**
-3. Cliquez sur l'icône Web (`</>`)
-4. Nommez l'application (ex: "Tab Sync Chrome")
-5. Copiez les valeurs de configuration
+---
 
-### 2. Configuration Google Cloud Console
+### 📂 Restauration Intelligente
 
-Pour que l'authentification fonctionne avec une extension Chrome :
+Récupérez vos onglets exactement comme vous les aviez laissés :
 
-1. Allez sur [Google Cloud Console](https://console.cloud.google.com/)
-2. Sélectionnez votre projet Firebase
-3. Allez dans **APIs & Services** > **Credentials**
-4. Cliquez sur **"Create Credentials"** > **"OAuth client ID"**
-5. Type d'application : **"Chrome Extension"**
-6. Nom : "Tab Sync"
-7. **Application ID** : Vous l'obtiendrez après avoir chargé l'extension (étape 4)
+- **Restauration complète** : Tous les onglets d'une session s'ouvrent dans une nouvelle fenêtre
+- **Filtrage automatique** : Les URLs internes de Chrome (`chrome://`) sont automatiquement exclues pour éviter les erreurs
+- **Préservation de l'ordre** : Les onglets sont restaurés dans l'ordre de sauvegarde
+- **Feedback instantané** : Notification du nombre d'onglets restaurés avec succès
 
-### 3. Configuration de l'extension
+---
 
-#### Modifier `popup.js`
+### 🗑️ Gestion des Sessions
 
-Remplacez la configuration Firebase au début du fichier :
+Gardez votre liste de sessions organisée :
 
-```javascript
-const firebaseConfig = {
-  apiKey: "VOTRE_API_KEY",
-  authDomain: "VOTRE_PROJET.firebaseapp.com",
-  projectId: "VOTRE_PROJECT_ID",
-  storageBucket: "VOTRE_PROJET.appspot.com",
-  messagingSenderId: "VOTRE_SENDER_ID",
-  appId: "VOTRE_APP_ID"
-};
-```
+- **Suppression simple** : Supprimez les sessions dont vous n'avez plus besoin
+- **Confirmation de sécurité** : Une modal de confirmation évite les suppressions accidentelles
+- **Liste triée** : Les sessions les plus récentes apparaissent en premier
+- **Informations détaillées** : Visualisez le nombre d'onglets, la date et l'appareil source pour chaque session
 
-#### Modifier `manifest.json`
+---
 
-Remplacez les valeurs OAuth2 :
+### 👁️ Aperçu des Onglets Actuels
 
-```json
-"oauth2": {
-  "client_id": "VOTRE_CLIENT_ID.apps.googleusercontent.com",
-  "scopes": [
-    "openid",
-    "email",
-    "profile"
-  ]
-}
-```
+Visualisez votre navigation actuelle avant de sauvegarder :
 
-### 4. Charger l'extension dans Chrome
+- **Liste complète** : Tous les onglets de la fenêtre actuelle sont affichés
+- **Favicons** : Les icônes des sites facilitent l'identification visuelle
+- **Compteur** : Le nombre total d'onglets est affiché en temps réel
+- **Titres complets** : Survolez un onglet pour voir l'URL complète
 
-1. Ouvrez Chrome et allez à `chrome://extensions/`
-2. Activez le **"Mode développeur"** (en haut à droite)
-3. Cliquez sur **"Charger l'extension non empaquetée"**
-4. Sélectionnez le dossier de l'extension
-5. **Copiez l'ID de l'extension** affiché (ex: `abcdefghijklmnopqrstuvwxyz123456`)
+---
 
-### 5. Finaliser la configuration OAuth
+### 🎨 Interface Moderne
 
-1. Retournez dans Google Cloud Console > Credentials
-2. Modifiez votre Client OAuth Chrome Extension
-3. Collez l'**ID de l'extension** dans "Application ID"
-4. Sauvegardez
+Une expérience utilisateur soignée et intuitive :
 
-## Création des icônes PNG
+- **Design épuré** : Interface minimaliste inspirée de Material Design
+- **Couleurs Google** : Palette de couleurs familière et agréable
+- **Animations fluides** : Transitions douces pour une expérience premium
+- **Notifications toast** : Feedback visuel pour toutes les actions (succès, erreur)
+- **Modales élégantes** : Dialogues de confirmation stylisés
+- **Responsive** : Interface adaptée à la taille du popup Chrome
 
-L'extension nécessite des icônes PNG. Vous pouvez :
+---
 
-### Option 1 : Convertir les SVG
-Utilisez un outil en ligne comme [SVG to PNG](https://svgtopng.com/) pour convertir :
-- `icons/icon16.svg` → `icons/icon16.png`
-- `icons/icon48.svg` → `icons/icon48.png`
-- `icons/icon128.svg` → `icons/icon128.png`
+## 🛡️ Sécurité & Confidentialité
 
-### Option 2 : Utiliser des icônes temporaires
-Créez des images PNG simples de 16x16, 48x48 et 128x128 pixels.
+- **Authentification Firebase** : Protocole OAuth 2.0 standard de l'industrie
+- **Règles Firestore strictes** : Chaque utilisateur ne peut accéder qu'à ses propres données
+- **Pas de tracking** : Aucune donnée de navigation n'est partagée avec des tiers
+- **Stockage sécurisé** : Les tokens sont stockés localement de manière sécurisée
+- **Open Source** : Code source transparent et vérifiable
 
-## Utilisation
+---
 
-1. Cliquez sur l'icône de l'extension
-2. Connectez-vous avec votre compte Google
-3. **Sauvegarder** : Cliquez sur "💾 Sauvegarder les onglets actuels"
-4. **Restaurer** : Cliquez sur "📂" à côté d'une session sauvegardée
-5. **Supprimer** : Cliquez sur "🗑️" pour supprimer une session
+## 📁 Structure des Données
 
-## Structure des fichiers
+Chaque session sauvegardée contient :
 
 ```
-Extension/
-├── manifest.json      # Configuration de l'extension
-├── popup.html         # Interface utilisateur
-├── popup.js           # Logique de l'interface
-├── background.js      # Service worker
-├── styles.css         # Styles CSS
-├── icons/
-│   ├── icon16.svg     # Icône 16x16
-│   ├── icon48.svg     # Icône 48x48
-│   └── icon128.svg    # Icône 128x128
-└── README.md          # Documentation
+Session
+├── name          → Nom personnalisé de la session
+├── device        → Appareil source (Windows, macOS, Linux...)
+├── createdAt     → Date et heure de création
+└── tabs[]        → Liste des onglets
+    ├── title     → Titre de la page
+    ├── url       → Adresse complète
+    ├── favIconUrl→ Icône du site
+    └── pinned    → État épinglé (true/false)
 ```
 
-## Structure Firestore
+---
 
-```
-users/
-└── {userId}/
-    └── sessions/
-        └── {sessionId}/
-            ├── name: string
-            ├── device: string
-            ├── createdAt: timestamp
-            └── tabs: array
-                └── {
-                    title: string,
-                    url: string,
-                    favIconUrl: string,
-                    pinned: boolean
-                }
-```
+## 🚀 Cas d'Utilisation
 
-## Dépannage
+| Scénario | Comment Tab Sync aide |
+|----------|----------------------|
+| **Travail → Maison** | Sauvegardez vos recherches au bureau, continuez chez vous |
+| **Recherches projet** | Gardez des collections d'onglets thématiques |
+| **Partage d'appareils** | Retrouvez vos onglets après qu'un autre utilisateur ait fermé Chrome |
+| **Avant mise à jour** | Sauvegardez avant une mise à jour système risquée |
+| **Organisation** | Créez des sessions par projet/thème que vous pouvez rouvrir à volonté |
+| **Backup** | Protection contre les crashes ou fermetures accidentelles |
 
-### Erreur "Identity API not available"
-- Vérifiez que le `client_id` OAuth est correct
-- Assurez-vous que l'ID de l'extension est ajouté dans Google Cloud Console
+---
 
-### Erreur Firebase
-- Vérifiez que les règles Firestore autorisent l'accès
-- Vérifiez que l'authentification Google est activée
-
-### Les icônes ne s'affichent pas
-- Convertissez les fichiers SVG en PNG
-- Vérifiez les chemins dans `manifest.json`
-
-## Licence
+## 📝 Licence
 
 MIT License - Utilisez librement ce projet !
+
+---
+
+**Développé avec ❤️ pour simplifier votre navigation quotidienne**
